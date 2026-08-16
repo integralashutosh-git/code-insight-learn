@@ -9,11 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as EditorRouteImport } from './routes/editor'
 import { Route as LearnRouteImport } from './routes/learn'
 import { Route as ProfileRouteImport } from './routes/profile'
 
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -36,12 +42,14 @@ const ProfileRoute = ProfileRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/editor': typeof EditorRoute
   '/learn': typeof LearnRoute
   '/profile': typeof ProfileRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/editor': typeof EditorRoute
   '/learn': typeof LearnRoute
@@ -49,6 +57,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/editor': typeof EditorRoute
   '/learn': typeof LearnRoute
@@ -56,13 +65,14 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/dashboard' | '/editor' | '/learn' | '/profile'
+  fullPaths: '/' | '/dashboard' | '/editor' | '/learn' | '/profile'
   fileRoutesByTo: FileRoutesByTo
-  to: '/dashboard' | '/editor' | '/learn' | '/profile'
-  id: '__root__' | '/dashboard' | '/editor' | '/learn' | '/profile'
+  to: '/' | '/dashboard' | '/editor' | '/learn' | '/profile'
+  id: '__root__' | '/' | '/dashboard' | '/editor' | '/learn' | '/profile'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
   EditorRoute: typeof EditorRoute
   LearnRoute: typeof LearnRoute
@@ -71,6 +81,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -103,6 +120,7 @@ declare module '@tanstack/react-router' {
 }
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
   EditorRoute: EditorRoute,
   LearnRoute: LearnRoute,
