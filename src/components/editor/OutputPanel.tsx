@@ -59,6 +59,11 @@ export function OutputPanel({ result, isRunning, error, language, onSubmitInput 
             <AlertTriangle className="size-4 text-destructive" />
             <span className="text-destructive">Program stopped with an error</span>
           </>
+        ) : needsInput ? (
+          <>
+            <Terminal className="size-4 text-primary" />
+            <span>Program is waiting for your input</span>
+          </>
         ) : (
           <>
             <CheckCircle2 className="size-4 text-primary" />
