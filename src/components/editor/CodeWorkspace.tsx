@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Download, FilePlus2, Play, Save, Upload, Moon, Sun, Sparkles } from "lucide-react";
+import { Download, FilePlus2, Play, RotateCcw, Save, Upload, Moon, Sun, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,6 +50,7 @@ export function CodeWorkspace() {
   const [runError, setRunError] = useState<string | null>(null);
   const [bottomTab, setBottomTab] = useState("output");
   const [stdin, setStdin] = useState("");
+  const stdinRef = useRef("");
   const cache = useRef(new Map<string, AnalysisResult>());
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -69,22 +70,28 @@ export function CodeWorkspace() {
       run({ data: input }),
   });
 
-  const handleRun = async (stdinValue = stdin) => {
+  const setInputBuffer = (value: string) => {
+    stdinRef.current = value;
+    setStdin(value);
+  };
+
+  const handleRun = async (stdinValue?: string) => {
     if (!activeFile.code.trim()) {
       toast.error("Write some code first");
       return;
     }
+    const input = stdinValue ?? stdinRef.current;
     setBottomTab("output");
     setRunError(null);
     try {
       const result = (await runMutation.mutateAsync({
         code: activeFile.code,
         language,
-        stdin: stdinValue,
+        stdin: input,
       })) as RunResult;
       setRunResult(result);
-      if (result.status === "success" && !result.needsInput) {
-        setStdin("");
+      if (!result.needsInput) {
+        setInputBuffer("");
       }
     } catch (err) {
       setRunResult(null);
@@ -93,9 +100,25 @@ export function CodeWorkspace() {
   };
 
   const submitStdinLine = (line: string) => {
-    const next = stdin ? `${stdin}\n${line}` : line;
-    setStdin(next);
+    const current = stdinRef.current;
+    const next = current ? `${current}\n${line}` : line;
+    setInputBuffer(next);
     void handleRun(next);
+  };
+
+  const handleReset = () => {
+    setFiles((prev) =>
+      prev.map((file) =>
+        file.id === activeId ? { ...file, code: LANGUAGES[file.language].sample } : file,
+      ),
+    );
+    setInputBuffer("");
+    setRunResult(null);
+    setRunError(null);
+    setAnalysis(null);
+    setError(null);
+    setBottomTab("output");
+    toast.success("Editor reset");
   };
 
   const selectLanguage = (lang: LanguageKey) => {
@@ -268,6 +291,15 @@ export function CodeWorkspace() {
         </Button>
         <Button
           variant="ghost"
+          size="sm"
+          className="rounded-lg"
+          onClick={handleReset}
+          title="Reset code, input, and output"
+        >
+          <RotateCcw className="size-4" /> Reset
+        </Button>
+        <Button
+          variant="ghost"
           size="icon"
           className="ml-auto rounded-lg"
           onClick={toggle}
@@ -339,7 +371,7 @@ export function CodeWorkspace() {
           </p>
           <Textarea
             value={stdin}
-            onChange={(e) => setStdin(e.target.value)}
+            onChange={(e) => setInputBuffer(e.target.value)}
             placeholder={"e.g.\n5\nAshutosh"}
             spellCheck={false}
             className="min-h-[120px] rounded-xl font-mono text-[13px]"
