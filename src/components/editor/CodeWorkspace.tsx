@@ -83,6 +83,9 @@ export function CodeWorkspace() {
         stdin: stdinValue,
       })) as RunResult;
       setRunResult(result);
+      if (result.status === "success" && !result.needsInput) {
+        setStdin("");
+      }
     } catch (err) {
       setRunResult(null);
       setRunError(err instanceof Error ? err.message : "Run failed");
