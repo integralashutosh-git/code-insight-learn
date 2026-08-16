@@ -2,16 +2,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Download, FilePlus2, Save, Upload, Moon, Sun, Sparkles } from "lucide-react";
+import { Download, FilePlus2, Play, Save, Upload, Moon, Sun, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Explorer, type ExplorerFile } from "./Explorer";
 import { LearningPanel } from "./LearningPanel";
 import { AnnotatedCode } from "./AnnotatedCode";
+import { OutputPanel } from "./OutputPanel";
+import { LanguagePicker } from "./LanguagePicker";
 import { LANGUAGES, type LanguageKey } from "@/lib/languages";
 import type { AnalysisResult } from "@/lib/analysis.types";
 import { analyzeCode } from "@/lib/analyze.functions";
+import type { RunResult } from "@/lib/run.types";
+import { runCode } from "@/lib/run.functions";
 import { useTheme } from "@/lib/useTheme";
 
 function initialFiles(): ExplorerFile[] {
@@ -40,6 +44,10 @@ export function CodeWorkspace() {
   const [activeId, setActiveId] = useState("java-main");
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [chosen, setChosen] = useState<LanguageKey | null>(null);
+  const [runResult, setRunResult] = useState<RunResult | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
+  const [bottomTab, setBottomTab] = useState("output");
   const cache = useRef(new Map<string, AnalysisResult>());
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -52,6 +60,52 @@ export function CodeWorkspace() {
     mutationFn: (input: { code: string; language: LanguageKey }) =>
       analyze({ data: input }),
   });
+
+  const run = useServerFn(runCode);
+  const runMutation = useMutation({
+    mutationFn: (input: { code: string; language: LanguageKey }) => run({ data: input }),
+  });
+
+  const handleRun = async () => {
+    if (!activeFile.code.trim()) {
+      toast.error("Write some code first");
+      return;
+    }
+    setBottomTab("output");
+    setRunError(null);
+    try {
+      const result = (await runMutation.mutateAsync({
+        code: activeFile.code,
+        language,
+      })) as RunResult;
+      setRunResult(result);
+    } catch (err) {
+      setRunResult(null);
+      setRunError(err instanceof Error ? err.message : "Run failed");
+    }
+  };
+
+  const selectLanguage = (lang: LanguageKey) => {
+    const target = files.find((f) => f.language === lang);
+    if (target) {
+      setActiveId(target.id);
+    } else {
+      const id = `file-${Date.now()}`;
+      setFiles((prev) => [
+        ...prev,
+        {
+          id,
+          name: `Main.${LANGUAGES[lang].extension}`,
+          language: lang,
+          code: LANGUAGES[lang].sample,
+        },
+      ]);
+      setActiveId(id);
+    }
+    setAnalysis(null);
+    setRunResult(null);
+    setRunError(null);
+  };
 
   const runAnalysis = useCallback(
     async (code: string, lang: LanguageKey) => {
@@ -150,26 +204,10 @@ export function CodeWorkspace() {
       onSelectFile={(id) => {
         setActiveId(id);
         setAnalysis(null);
+        setRunResult(null);
+        setRunError(null);
       }}
-      onSelectLanguage={(lang) => {
-        const target = files.find((f) => f.language === lang);
-        if (target) {
-          setActiveId(target.id);
-          setAnalysis(null);
-        } else {
-          const id = `file-${Date.now()}`;
-          setFiles((prev) => [
-            ...prev,
-            {
-              id,
-              name: `Main.${LANGUAGES[lang].extension}`,
-              language: lang,
-              code: LANGUAGES[lang].sample,
-            },
-          ]);
-          setActiveId(id);
-        }
-      }}
+      onSelectLanguage={selectLanguage}
     />
   );
 
@@ -185,6 +223,14 @@ export function CodeWorkspace() {
   const center = (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-wrap items-center gap-1.5 border-b border-border px-3 py-2">
+        <Button
+          size="sm"
+          className="rounded-lg"
+          onClick={() => void handleRun()}
+          disabled={runMutation.isPending}
+        >
+          <Play className="size-4" /> {runMutation.isPending ? "Running…" : "Run"}
+        </Button>
         <Button variant="ghost" size="sm" className="rounded-lg" onClick={handleNewFile}>
           <FilePlus2 className="size-4" /> New File
         </Button>
@@ -248,26 +294,51 @@ export function CodeWorkspace() {
         />
       </div>
 
-      <div className="flex h-[45%] min-h-[180px] flex-col border-t border-border bg-code-surface">
-        <div className="flex items-center gap-2 border-b border-border px-3 py-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          <Sparkles className="size-3.5 text-primary" />
-          AI commented code
+      <Tabs
+        value={bottomTab}
+        onValueChange={setBottomTab}
+        className="flex h-[45%] min-h-[200px] flex-col border-t border-border bg-code-surface"
+      >
+        <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+          <TabsList className="rounded-lg">
+            <TabsTrigger value="output">Output</TabsTrigger>
+            <TabsTrigger value="comments">AI comments</TabsTrigger>
+          </TabsList>
           {mutation.isPending ? (
-            <span className="ml-auto text-[11px] font-normal normal-case text-primary">
-              reading your code…
+            <span className="ml-auto flex items-center gap-1 text-[11px] text-primary">
+              <Sparkles className="size-3" /> reading your code…
             </span>
           ) : null}
         </div>
-        <div className="min-h-0 flex-1 overflow-auto">
+        <TabsContent value="output" className="min-h-0 flex-1 overflow-auto">
+          <OutputPanel
+            result={runResult}
+            isRunning={runMutation.isPending}
+            error={runError}
+            language={language}
+          />
+        </TabsContent>
+        <TabsContent value="comments" className="min-h-0 flex-1 overflow-auto">
           <AnnotatedCode
             code={activeFile.code}
             comments={analysis?.comments ?? []}
             commentPrefix={meta.commentPrefix}
           />
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
+
+  if (!chosen) {
+    return (
+      <LanguagePicker
+        onSelect={(lang) => {
+          selectLanguage(lang);
+          setChosen(lang);
+        }}
+      />
+    );
+  }
 
   return (
     <>
