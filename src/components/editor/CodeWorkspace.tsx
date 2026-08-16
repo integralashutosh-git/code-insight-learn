@@ -366,6 +366,7 @@ export function CodeWorkspace() {
 
   return (
     <>
+      <h1 className="sr-only">AI Code Editor</h1>
       <div className="hidden h-[calc(100vh-4rem)] grid-cols-[20%_50%_30%] lg:grid">
         <aside className="min-h-0 border-r border-border bg-sidebar">{explorer}</aside>
         <main className="min-h-0">{center}</main>
