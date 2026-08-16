@@ -32,6 +32,7 @@ export async function runProgram(
   code: string,
   language: string,
   apiKey: string,
+  stdin = "",
 ): Promise<RunResult> {
   const numbered = code
     .split("\n")
@@ -43,6 +44,9 @@ Allowed concept names (use these exact strings): ${CONCEPT_ORDER.join(", ")}
 
 Program with line numbers:
 ${numbered}
+
+Standard input provided by the user (consume these lines in order for any read/scan/input call):
+${stdin ? stdin : "(empty — if the program needs input, set status to \"error\" and explain that input is required in the Input box)"}
 
 Reply with JSON only, in this exact shape:
 {"status":"success" or "error","output":"exact console output, newline separated","errorMessage":"compiler/runtime error text or empty","errorLine":number or null,"explanation":"why this happens, for a beginner","solution":"how to fix it, short steps","fixedCode":"corrected full program or empty when there is no error","concepts":["Loops"]}`;

@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Download, FilePlus2, Play, Save, Upload, Moon, Sun, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Explorer, type ExplorerFile } from "./Explorer";
 import { LearningPanel } from "./LearningPanel";
@@ -48,6 +49,7 @@ export function CodeWorkspace() {
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [bottomTab, setBottomTab] = useState("output");
+  const [stdin, setStdin] = useState("");
   const cache = useRef(new Map<string, AnalysisResult>());
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -63,7 +65,8 @@ export function CodeWorkspace() {
 
   const run = useServerFn(runCode);
   const runMutation = useMutation({
-    mutationFn: (input: { code: string; language: LanguageKey }) => run({ data: input }),
+    mutationFn: (input: { code: string; language: LanguageKey; stdin: string }) =>
+      run({ data: input }),
   });
 
   const handleRun = async () => {
@@ -77,6 +80,7 @@ export function CodeWorkspace() {
       const result = (await runMutation.mutateAsync({
         code: activeFile.code,
         language,
+        stdin,
       })) as RunResult;
       setRunResult(result);
     } catch (err) {
@@ -302,6 +306,7 @@ export function CodeWorkspace() {
         <div className="flex items-center gap-2 border-b border-border px-3 py-2">
           <TabsList className="rounded-lg">
             <TabsTrigger value="output">Output</TabsTrigger>
+            <TabsTrigger value="input">Input</TabsTrigger>
             <TabsTrigger value="comments">AI comments</TabsTrigger>
           </TabsList>
           {mutation.isPending ? (
@@ -316,6 +321,18 @@ export function CodeWorkspace() {
             isRunning={runMutation.isPending}
             error={runError}
             language={language}
+          />
+        </TabsContent>
+        <TabsContent value="input" className="min-h-0 flex-1 overflow-auto p-3">
+          <p className="pb-2 text-xs text-muted-foreground">
+            Type the values your program reads (one per line), then press Run.
+          </p>
+          <Textarea
+            value={stdin}
+            onChange={(e) => setStdin(e.target.value)}
+            placeholder={"e.g.\n5\nAshutosh"}
+            spellCheck={false}
+            className="min-h-[120px] rounded-xl font-mono text-[13px]"
           />
         </TabsContent>
         <TabsContent value="comments" className="min-h-0 flex-1 overflow-auto">
