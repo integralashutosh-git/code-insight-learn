@@ -12,4 +12,11 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    resolve: {
+      alias: {
+        "decimal.js-light": "decimal.js-light/decimal.mjs",
+      },
+    },
+  },
 });
