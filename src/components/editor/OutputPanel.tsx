@@ -1,6 +1,8 @@
-import { AlertTriangle, CheckCircle2, Clock, Lightbulb, PlayCircle, Terminal, Youtube } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertTriangle, CheckCircle2, Clock, CornerDownLeft, Lightbulb, PlayCircle, Terminal, Youtube } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { RunResult } from "@/lib/run.types";
 import type { LanguageKey } from "@/lib/languages";
 import { findLectures, thumbnailUrl, watchUrl } from "@/lib/videoLibrary";
@@ -10,9 +12,17 @@ interface Props {
   isRunning: boolean;
   error: string | null;
   language: LanguageKey;
+  onSubmitInput?: (value: string) => void;
 }
 
-export function OutputPanel({ result, isRunning, error, language }: Props) {
+export function OutputPanel({ result, isRunning, error, language, onSubmitInput }: Props) {
+  const [value, setValue] = useState("");
+  const needsInput = !!result?.needsInput;
+
+  useEffect(() => {
+    if (needsInput) setValue("");
+  }, [needsInput, result?.output]);
+
   if (isRunning) {
     return (
       <div className="flex items-center gap-2 p-4 font-mono text-sm text-muted-foreground">
@@ -49,6 +59,11 @@ export function OutputPanel({ result, isRunning, error, language }: Props) {
             <AlertTriangle className="size-4 text-destructive" />
             <span className="text-destructive">Program stopped with an error</span>
           </>
+        ) : needsInput ? (
+          <>
+            <Terminal className="size-4 text-primary" />
+            <span>Program is waiting for your input</span>
+          </>
         ) : (
           <>
             <CheckCircle2 className="size-4 text-primary" />
@@ -65,6 +80,28 @@ export function OutputPanel({ result, isRunning, error, language }: Props) {
           ? result.errorMessage || "Unknown error"
           : result.output || "(no output produced)"}
       </pre>
+
+      {needsInput && onSubmitInput ? (
+        <form
+          className="flex items-center gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!value.trim()) return;
+            onSubmitInput(value);
+          }}
+        >
+          <Input
+            autoFocus
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder={result.inputPrompts?.[0] ?? "Type your input and press Enter"}
+            className="rounded-xl font-mono text-[13px]"
+          />
+          <Button type="submit" size="sm" className="rounded-xl">
+            <CornerDownLeft className="size-4" /> Send
+          </Button>
+        </form>
+      ) : null}
 
       {failed && result.explanation ? (
         <div className="rounded-xl border border-border p-3 text-sm">

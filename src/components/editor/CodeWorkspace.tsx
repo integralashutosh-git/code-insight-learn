@@ -69,7 +69,7 @@ export function CodeWorkspace() {
       run({ data: input }),
   });
 
-  const handleRun = async () => {
+  const handleRun = async (stdinValue = stdin) => {
     if (!activeFile.code.trim()) {
       toast.error("Write some code first");
       return;
@@ -80,13 +80,19 @@ export function CodeWorkspace() {
       const result = (await runMutation.mutateAsync({
         code: activeFile.code,
         language,
-        stdin,
+        stdin: stdinValue,
       })) as RunResult;
       setRunResult(result);
     } catch (err) {
       setRunResult(null);
       setRunError(err instanceof Error ? err.message : "Run failed");
     }
+  };
+
+  const submitStdinLine = (line: string) => {
+    const next = stdin ? `${stdin}\n${line}` : line;
+    setStdin(next);
+    void handleRun(next);
   };
 
   const selectLanguage = (lang: LanguageKey) => {
@@ -321,6 +327,7 @@ export function CodeWorkspace() {
             isRunning={runMutation.isPending}
             error={runError}
             language={language}
+            onSubmitInput={submitStdinLine}
           />
         </TabsContent>
         <TabsContent value="input" className="min-h-0 flex-1 overflow-auto p-3">

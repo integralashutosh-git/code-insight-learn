@@ -46,10 +46,17 @@ Program with line numbers:
 ${numbered}
 
 Standard input provided by the user (consume these lines in order for any read/scan/input call):
-${stdin ? stdin : "(empty — if the program needs input, set status to \"error\" and explain that input is required in the Input box)"}
+${stdin ? stdin : "(empty)"}
+
+Rules about input:
+- If the program reads input and the standard input above is empty or has fewer values than needed,
+  DO NOT treat that as a program error. Instead set "status":"success", "needsInput":true,
+  "inputPrompts": the list of prompt texts the program shows for each value it still needs,
+  and "output": the prompts printed so far.
+- Otherwise set "needsInput":false and run the program normally with the provided values.
 
 Reply with JSON only, in this exact shape:
-{"status":"success" or "error","output":"exact console output, newline separated","errorMessage":"compiler/runtime error text or empty","errorLine":number or null,"explanation":"why this happens, for a beginner","solution":"how to fix it, short steps","fixedCode":"corrected full program or empty when there is no error","concepts":["Loops"]}`;
+{"status":"success" or "error","needsInput":true or false,"inputPrompts":["Enter a number"],"output":"exact console output, newline separated","errorMessage":"compiler/runtime error text or empty","errorLine":number or null,"explanation":"why this happens, for a beginner","solution":"how to fix it, short steps","fixedCode":"corrected full program or empty when there is no error","concepts":["Loops"]}`;
 
   const res = await fetch(ENDPOINT, {
     method: "POST",
@@ -85,9 +92,14 @@ Reply with JSON only, in this exact shape:
 
   const status = parsed["status"] === "error" ? "error" : "success";
   const errorLine = parsed["errorLine"];
+  const prompts = Array.isArray(parsed["inputPrompts"])
+    ? (parsed["inputPrompts"] as unknown[]).filter((p): p is string => typeof p === "string")
+    : [];
 
   return {
     status,
+    needsInput: parsed["needsInput"] === true,
+    inputPrompts: prompts,
     output: str(parsed["output"]),
     errorMessage: str(parsed["errorMessage"]),
     errorLine: typeof errorLine === "number" ? errorLine : null,
