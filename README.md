@@ -1,6 +1,6 @@
 # CodeInsight
 
-### Full Lovable Prompt — CodeInsight
+### CodeInsight
 
 
 
