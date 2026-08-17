@@ -39,7 +39,7 @@ npm run dev
 
 Students write code → AI understands it instantly → explains every line → detects concepts → recommends the perfect lecture.
 
-> **Note:** CodeInsight is a learning platform, not an online compiler. It never executes user code.
+> **Note:** CodeInsight is a learning platform, online compiler. It executes and comments user code.
 
 ## 📄 License
 
